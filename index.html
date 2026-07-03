@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>配置设备信息</title>
+<style>
+*{box-sizing: border-box;}
+body{
+    margin:0;
+    background:#f0f4f8;
+    display:flex;
+    justify-content:center;
+    align-items:center;
+    height:100vh;
+    font-family: sans-serif;
+}
+.wrap{
+    width:340px;
+    background:#fff;
+    padding:28px;
+    border-radius:14px;
+    box-shadow:0 6px 18px rgba(0,0,0,0.12);
+}
+h2{text-align:center; margin-top:0; color:#333;}
+.item{margin:16px 0;}
+label{display:block; margin-bottom:6px; color:#444;}
+input{
+    width:100%;
+    padding:11px;
+    border:1px solid #dde2e8;
+    border-radius:7px;
+    font-size:15px;
+}
+.btns{margin-top:20px;}
+button{
+    width:100%;
+    padding:12px;
+    border:none;
+    border-radius:7px;
+    font-size:16px;
+    cursor:pointer;
+}
+#save{background:#4dabf7; color:#fff; margin-bottom:10px;}
+#back{background:#bbb; color:#fff;}
+</style>
+</head>
+<body>
+<div class="wrap">
+    <h2>设备参数配置</h2>
+    <div class="item">
+        <label>用户Token</label>
+        <input id="token" placeholder="接口Authorization令牌">
+    </div>
+    <div class="item">
+        <label>热水设备DID</label>
+        <input id="hotDid" placeholder="热水设备编号">
+    </div>
+    <div class="item">
+        <label>冷水设备DID</label>
+        <input id="coldDid" placeholder="冷水设备编号">
+    </div>
+    <div class="btns">
+        <button id="save">保存配置</button>
+        <button id="back" onclick="location.href='use.html'">返回控制页面</button>
+    </div>
+</div>
+
+<script>
+// 页面加载回填已有数据
+const tokenInp = document.getElementById('token');
+const hotInp = document.getElementById('hotDid');
+const coldInp = document.getElementById('coldDid');
+
+tokenInp.value = localStorage.getItem('user_token') || '';
+hotInp.value = localStorage.getItem('user_hot_did') || '';
+coldInp.value = localStorage.getItem('user_cold_did') || '';
+
+// 保存写入本地存储
+document.getElementById('save').onclick = ()=>{
+    localStorage.setItem('user_token', tokenInp.value.trim());
+    localStorage.setItem('user_hot_did', hotInp.value.trim());
+    localStorage.setItem('user_cold_did', coldInp.value.trim());
+    alert('配置保存成功！');
+}
+</script>
+</body>
+</html>

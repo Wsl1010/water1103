@@ -1,0 +1,130 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>热冷水控制</title>
+    <style>
+      body {
+        font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+        background: #f0f4f8;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        height: 100vh;
+        margin: 0;
+      }
+      .container {
+        background: #fff;
+        padding: 30px 40px;
+        border-radius: 15px;
+        box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
+        text-align: center;
+        width: 320px;
+      }
+      h1 {
+        margin-bottom: 20px;
+        font-size: 24px;
+        color: #333;
+      }
+      button {
+        width: 140px;
+        padding: 12px 0;
+        margin: 10px;
+        border: none;
+        border-radius: 8px;
+        font-size: 16px;
+        cursor: pointer;
+        transition: all 0.2s ease;
+      }
+      button:hover {
+        transform: scale(1.05);
+      }
+      #btn_hot {
+        background: #ff6b6b;
+        color: #fff;
+      }
+      #btn_cold {
+        background: #4dabf7;
+        color: #fff;
+      }
+      #change_local_info {
+        background: #d79cc9;
+        color: #fff;
+      }
+      #result {
+        margin-top: 20px;
+        font-size: 16px;
+        color: #555;
+        min-height: 24px;
+      }
+      a {
+        color: white;
+        text-decoration: none;
+      }
+      a:hover {
+        color: #e2231a;
+        text-decoration: none;
+      }
+    </style>
+</head>
+<body>
+    <div class="container">
+      <h1>热冷水控制</h1>
+      <button id="btn_hot">热水</button>
+      <button id="btn_cold">冷水</button>
+      <button id="change_local_info"><a href="index.html">修改数据</a></button>
+      <div id="result">返回结果会显示在这里</div>
+    </div>
+
+    <script>
+      // 读取本地存储
+      const user_token = localStorage.getItem("user_token");
+      const did_hot = localStorage.getItem("user_hot_did");
+      const did_cold = localStorage.getItem("user_cold_did");
+      const resultBox = document.getElementById("result");
+
+      function startWater(did, name) {
+        // 校验token
+        if (!user_token) {
+          resultBox.textContent = "未配置Token，请点击修改数据填写";
+          return;
+        }
+        // 校验设备ID
+        if (!did) {
+          resultBox.textContent = `${name}设备DID未填写，请前往修改数据`;
+          return;
+        }
+
+        // 移除无效 args&
+        const url = `https://i.ilife798.com/api/v1/dev/start?did=${did}&ptype=91&rcp=0&upgrade=1`;
+        const headers = {
+          "User-Agent": "iLife798/3.0.12 (iPad; iOS 18.4.1; Scale/2.00)",
+          "Content-Type": "application/json",
+          VersionCode: "iOS_3.0.12",
+          "Accept-Language": "zh-Hans-CN;q=1",
+          Authorization: user_token, // 修复变量名token → user_token
+        };
+
+        resultBox.textContent = `${name} 请求中...`;
+        fetch(url, { method: "GET", headers })
+          .then(res => res.json())
+          .then(data => {
+            if (data.code === 0) {
+              resultBox.textContent = `${name} 开启成功`;
+            } else {
+              resultBox.textContent = `${name} 失败 | 错误码：${data.code} | ${data.msg || "无错误描述"}`;
+            }
+          })
+          .catch(err => {
+            // 使用err.message展示可读错误
+            resultBox.textContent = `${name} 网络异常：${err.message}`;
+          });
+      }
+
+      // 按钮绑定
+      document.getElementById("btn_hot").addEventListener("click", () => startWater(did_hot, "热水"));
+      document.getElementById("btn_cold").addEventListener("click", () => startWater(did_cold, "冷水"));
+    </script>
+</body>
+</html>
