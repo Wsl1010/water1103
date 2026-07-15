@@ -1,0 +1,237 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>登录获取Token</title>
+<style>
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: #f0f4f8;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+  }
+  .wrap {
+    width: 340px;
+    background: #fff;
+    padding: 28px;
+    border-radius: 14px;
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.12);
+  }
+  h2 { text-align: center; margin-top: 0; color: #333; }
+  .item { margin: 16px 0; }
+  label { display: block; margin-bottom: 6px; color: #444; font-size: 14px; }
+  input {
+    width: 100%;
+    padding: 11px;
+    border: 1px solid #dde2e8;
+    border-radius: 7px;
+    font-size: 15px;
+  }
+  .row {
+    display: flex;
+    gap: 10px;
+    align-items: stretch;
+  }
+  .row input { flex: 1; }
+  .captcha-img {
+    height: 44px;
+    border: 1px solid #dde2e8;
+    border-radius: 7px;
+    cursor: pointer;
+    background: #f7f9fb;
+  }
+  .sms-btn {
+    white-space: nowrap;
+    padding: 0 14px;
+    border: none;
+    border-radius: 7px;
+    background: #4dabf7;
+    color: #fff;
+    font-size: 14px;
+    cursor: pointer;
+  }
+  .sms-btn:disabled { background: #b8d8f5; cursor: not-allowed; }
+  button.primary {
+    width: 100%;
+    padding: 12px;
+    border: none;
+    border-radius: 7px;
+    font-size: 16px;
+    cursor: pointer;
+    background: #4dabf7;
+    color: #fff;
+    margin-top: 8px;
+  }
+  button.ghost {
+    width: 100%;
+    padding: 12px;
+    border: none;
+    border-radius: 7px;
+    font-size: 15px;
+    cursor: pointer;
+    background: #bbb;
+    color: #fff;
+    margin-top: 10px;
+  }
+  #msg {
+    margin-top: 14px;
+    min-height: 20px;
+    font-size: 14px;
+    color: #555;
+    text-align: center;
+    word-break: break-all;
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h2>登录获取Token</h2>
+
+  <div class="item">
+    <label>手机号</label>
+    <input id="phone" type="tel" placeholder="请输入手机号" />
+  </div>
+
+  <div class="item">
+    <label>图形验证码</label>
+    <div class="row">
+      <input id="captcha" placeholder="点击右侧图片刷新" />
+      <img id="captchaImg" class="captcha-img" alt="验证码" title="点击刷新" />
+    </div>
+  </div>
+
+  <div class="item">
+    <label>短信验证码</label>
+    <div class="row">
+      <input id="smsCode" placeholder="收到的短信验证码" />
+      <button id="sendSms" class="sms-btn">发送验证码</button>
+    </div>
+  </div>
+
+  <button id="login" class="primary">登录并保存Token</button>
+  <button class="ghost" onclick="location.href='use.html'">返回控制页面</button>
+
+  <div id="msg"></div>
+</div>
+
+<script>
+  const BASE = "https://i.ilife798.com/api/v1";
+
+  const phoneInp = document.getElementById("phone");
+  const captchaInp = document.getElementById("captcha");
+  const smsInp = document.getElementById("smsCode");
+  const captchaImg = document.getElementById("captchaImg");
+  const sendBtn = document.getElementById("sendSms");
+  const loginBtn = document.getElementById("login");
+  const msg = document.getElementById("msg");
+
+  // 当前图形验证码对应的随机参数（发短信时要带上同一组）
+  let doubleRandom = "";
+  let timestamp = "";
+  let smsCountdown = 0;
+
+  function setMsg(text, color = "#555") {
+    msg.textContent = text;
+    msg.style.color = color;
+  }
+
+  // 刷新图形验证码：直接把 URL 挂到 img.src，图片显示不受 CORS 读取限制
+  function refreshCaptcha() {
+    doubleRandom = Math.random().toString();
+    timestamp = Date.now().toString();
+    captchaImg.src = `${BASE}/captcha/?s=${encodeURIComponent(doubleRandom)}&r=${encodeURIComponent(timestamp)}`;
+  }
+
+  captchaImg.addEventListener("click", refreshCaptcha);
+
+  // 发送短信验证码
+  sendBtn.addEventListener("click", async () => {
+    if (!phoneInp.value.trim()) return setMsg("请输入手机号", "#e2231a");
+    if (!captchaInp.value.trim()) return setMsg("请输入图形验证码", "#e2231a");
+
+    sendBtn.disabled = true;
+    setMsg("发送中...");
+    try {
+      const res = await fetch(`${BASE}/acc/login/code`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          s: doubleRandom,
+          authCode: captchaInp.value.trim(),
+          un: phoneInp.value.trim(),
+        }),
+      });
+      const data = await res.json();
+      if (data.code === 0) {
+        setMsg("验证码已发送，请查收短信", "#2b8a3e");
+        startCountdown();
+      } else {
+        setMsg(`发送失败：${data.msg || "图形验证码错误"}`, "#e2231a");
+        refreshCaptcha();
+        sendBtn.disabled = false;
+      }
+    } catch (err) {
+      setMsg(`网络异常：${err.message}`, "#e2231a");
+      sendBtn.disabled = false;
+    }
+  });
+
+  function startCountdown() {
+    smsCountdown = 60;
+    tick();
+    function tick() {
+      if (smsCountdown <= 0) {
+        sendBtn.disabled = false;
+        sendBtn.textContent = "发送验证码";
+        return;
+      }
+      sendBtn.disabled = true;
+      sendBtn.textContent = `${smsCountdown}s`;
+      smsCountdown--;
+      setTimeout(tick, 1000);
+    }
+  }
+
+  // 登录并保存 token
+  loginBtn.addEventListener("click", async () => {
+    if (!phoneInp.value.trim()) return setMsg("请输入手机号", "#e2231a");
+    if (!smsInp.value.trim()) return setMsg("请输入短信验证码", "#e2231a");
+
+    loginBtn.disabled = true;
+    setMsg("登录中...");
+    try {
+      const res = await fetch(`${BASE}/acc/login`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          openCode: "",
+          authCode: smsInp.value.trim(),
+          un: phoneInp.value.trim(),
+          cid: "drinkwaterapp123456789",
+        }),
+      });
+      const data = await res.json();
+      if (data.code === 0 && data.data && data.data.al && data.data.al.token) {
+        localStorage.setItem("user_token", data.data.al.token);
+        setMsg("登录成功，Token 已保存！正在跳转...", "#2b8a3e");
+        setTimeout(() => (location.href = "use.html"), 1000);
+      } else {
+        setMsg(`登录失败：${data.msg || "验证码错误或已过期"}`, "#e2231a");
+        loginBtn.disabled = false;
+      }
+    } catch (err) {
+      setMsg(`网络异常：${err.message}`, "#e2231a");
+      loginBtn.disabled = false;
+    }
+  });
+
+  // 初始化
+  refreshCaptcha();
+</script>
+</body>
+</html>
